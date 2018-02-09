@@ -1,10 +1,11 @@
 module Expr where
 
 import Parsing
+import Control.Applicative
 
 type Name = String
 
--- At first, 'Expr' contains only addition and values. You will need to 
+-- At first, 'Expr' contains only addition and values. You will need to
 -- add other operations, and variables
 data Expr = Add Expr Expr
           | Val Int
@@ -20,7 +21,7 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
         Maybe Int -- Result (if no errors such as missing variables)
 eval vars (Val x) = Just x -- for values, just give the value directly
-eval vars (Add x y) = Nothing -- return an error (because it's not implemented yet!)
+eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 
 digitToInt :: Char -> Int
 digitToInt x = fromEnum x - fromEnum '0'
@@ -40,14 +41,14 @@ pExpr = do t <- pTerm
               return (Add t e)
             ||| do char '-'
                    e <- pExpr
-                   error "Subtraction not yet implemented!" 
+                   error "Subtraction not yet implemented!"
                  ||| return t
 
 pFactor :: Parser Expr
 pFactor = do d <- digit
              return (Val (digitToInt d))
            ||| do v <- letter
-                  error "Variables not yet implemented" 
+                  error "Variables not yet implemented"
                 ||| do char '('
                        e <- pExpr
                        char ')'
@@ -57,9 +58,8 @@ pTerm :: Parser Expr
 pTerm = do f <- pFactor
            do char '*'
               t <- pTerm
-              error "Multiplication not yet implemented" 
+              error "Multiplication not yet implemented"
             ||| do char '/'
                    t <- pTerm
-                   error "Division not yet implemented" 
+                   error "Division not yet implemented"
                  ||| return f
-
