@@ -8,6 +8,7 @@ type Name = String
 -- At first, 'Expr' contains only addition and values. You will need to
 -- add other operations, and variables
 data Expr = Add Expr Expr
+          | Subtract Expr Expr
           | Val Int
   deriving Show
 
@@ -22,6 +23,7 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
         Maybe Int -- Result (if no errors such as missing variables)
 eval vars (Val x) = Just x -- for values, just give the value directly
 eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
+eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 
 digitToInt :: Char -> Int
 digitToInt x = fromEnum x - fromEnum '0'
@@ -41,7 +43,8 @@ pExpr = do t <- pTerm
               return (Add t e)
             ||| do char '-'
                    e <- pExpr
-                   error "Subtraction not yet implemented!"
+                   return (Subtract t e)
+                   --error "Subtraction not yet implemented!"
                  ||| return t
 
 pFactor :: Parser Expr
