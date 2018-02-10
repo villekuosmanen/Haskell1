@@ -9,6 +9,8 @@ type Name = String
 -- add other operations, and variables
 data Expr = Add Expr Expr
           | Subtract Expr Expr
+          | Multiply Expr Expr
+          | Divide Expr Expr
           | Val Int
   deriving Show
 
@@ -24,6 +26,8 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
 eval vars (Val x) = Just x -- for values, just give the value directly
 eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
+eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
+eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
 
 digitToInt :: Char -> Int
 digitToInt x = fromEnum x - fromEnum '0'
@@ -61,8 +65,10 @@ pTerm :: Parser Expr
 pTerm = do f <- pFactor
            do char '*'
               t <- pTerm
-              error "Multiplication not yet implemented"
+              return (Multiply f t)
+              --error "Multiplication not yet implemented"
             ||| do char '/'
                    t <- pTerm
-                   error "Division not yet implemented"
+                   return (Divide f t)
+                   --error "Division not yet implemented"
                  ||| return f
