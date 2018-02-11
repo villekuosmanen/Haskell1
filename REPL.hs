@@ -2,6 +2,7 @@ module REPL where
 
 import Expr
 import Parsing
+import Data.Maybe
 
 data State = State { vars :: [(Name, Int)],
                      numCalcs :: Int,
@@ -22,7 +23,7 @@ dropVar = undefined
 
 -- Add a command to the command history in the state
 addHistory :: State -> Command -> State
-addHistory = undefined
+addHistory st cmd = st {history = history st ++ [cmd]}
 
 process :: State -> Command -> IO ()
 process st (Set var e) 
@@ -30,9 +31,8 @@ process st (Set var e)
           -- st' should include the variable set to the result of evaluating e
           repl st'
 process st (Eval e) 
-     = do let st' = undefined
-          -- Print the result of evaluation
-          repl st'
+     = do let st' = addHistory st (Eval e)
+          repl st' {numCalcs = (fromMaybe 0 (eval (vars st') e))}
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
