@@ -15,11 +15,11 @@ initState = State [] 0 []
 -- that name and value added.
 -- If it already exists, remove the old value
 updateVars :: Name -> Int -> [(Name, Int)] -> [(Name, Int)]
-updateVars = undefined
+updateVars n x vars = dropVar n vars ++ [(n,x)] --Needs logic to gemove old value
 
 -- Return a new set of variables with the given name removed
 dropVar :: Name -> [(Name, Int)] -> [(Name, Int)]
-dropVar = undefined
+dropVar n vars = filter (\(a,b) -> a /= n) vars
 
 -- Add a command to the command history in the state
 addHistory :: State -> Command -> State
@@ -27,12 +27,13 @@ addHistory st cmd = st {history = history st ++ [cmd]}
 
 process :: State -> Command -> IO ()
 process st (Set var e) 
-     = do let st' = undefined
+     = do let st' = addHistory st (Set var e)
           -- st' should include the variable set to the result of evaluating e
-          repl st'
-process st (Eval e) 
+          putStrLn ("OK")
+          repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
+process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          repl st' {numCalcs = (fromMaybe 0 (eval (vars st') e))}
+          repl st' {numCalcs = (fromJust (eval (vars st') e))}
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls

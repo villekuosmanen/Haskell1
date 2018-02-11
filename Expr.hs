@@ -2,6 +2,9 @@ module Expr where
 
 import Parsing
 import Control.Applicative
+import Data.List
+import Data.Tuple
+import Data.Maybe
 
 type Name = String
 
@@ -12,6 +15,7 @@ data Expr = Add Expr Expr
           | Multiply Expr Expr
           | Divide Expr Expr
           | Val Int
+          | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
@@ -24,6 +28,10 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
         Maybe Int -- Result (if no errors such as missing variables)
 eval vars (Val x) = Just x -- for values, just give the value directly
+eval vars (ValueOf n) = find' n vars
+    where find' _ []         = Nothing
+          find' n ((x,y):xs) = if x == n then Just y else find' n xs
+
 eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
@@ -48,14 +56,13 @@ pExpr = do t <- pTerm
             ||| do char '-'
                    e <- pExpr
                    return (Subtract t e)
-                   --error "Subtraction not yet implemented!"
                  ||| return t
 
 pFactor :: Parser Expr
 pFactor = do d <- digit
              return (Val (digitToInt d))
            ||| do v <- letter
-                  error "Variables not yet implemented"
+                  return (ValueOf [v])
                 ||| do char '('
                        e <- pExpr
                        char ')'
@@ -66,9 +73,7 @@ pTerm = do f <- pFactor
            do char '*'
               t <- pTerm
               return (Multiply f t)
-              --error "Multiplication not yet implemented"
             ||| do char '/'
                    t <- pTerm
                    return (Divide f t)
-                   --error "Division not yet implemented"
                  ||| return f
