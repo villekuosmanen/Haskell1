@@ -34,6 +34,8 @@ process st (Set var e)
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
           repl st' {numCalcs = (fromJust (eval (vars st') e))}
+process st Quit
+     = putStrLn("Bye")
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
