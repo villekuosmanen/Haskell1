@@ -28,13 +28,17 @@ addHistory st cmd = st {history = history st ++ [cmd]}
 process :: State -> Command -> IO ()
 process st (Set var e)
      = do let st' = addHistory st (Set var e)
-          -- st' should include the variable set to the result of evaluating e
-          putStrLn ("OK")
-          repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
+          if var /= "it" then do               -- protecting 'it' variable from modifications
+            putStrLn ("OK")
+            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
+          else do
+            putStrLn("Cannot modify the implicit 'it' variable.")
+            repl st'
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          putStrLn (show (fromJust (eval (vars st') e)))
-          repl st' {numCalcs = numCalcs st' + 1}
+          let it = fromJust (eval (vars st') e)
+          putStrLn (show it)
+          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)}
 process st Quit
      = putStrLn("Bye")
 
