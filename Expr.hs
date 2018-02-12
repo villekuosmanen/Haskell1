@@ -38,14 +38,14 @@ eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
 eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
 
-digitToInt :: Char -> Int
-digitToInt x = fromEnum x - fromEnum '0'
+digitToInt :: [Char] -> Int
+digitToInt ds = read ds
 
 pCommand :: Parser Command
-pCommand = do t <- letter
+pCommand = do t <- ident
               char '='
               e <- pExpr
-              return (Set [t] e)
+              return (Set t e)
             ||| do e <- pExpr
                    return (Eval e)
                    ||| do char ':'
@@ -63,10 +63,10 @@ pExpr = do t <- pTerm
                  ||| return t
 
 pFactor :: Parser Expr
-pFactor = do d <- digit
-             return (Val (digitToInt d))
-           ||| do v <- letter
-                  return (ValueOf [v])
+pFactor = do ds <- many1 digit
+             return (Val (digitToInt ds))
+           ||| do vs <- ident
+                  return (ValueOf vs)
                 ||| do char '('
                        e <- pExpr
                        char ')'

@@ -9,13 +9,13 @@ data State = State { vars :: [(Name, Int)],
                      history :: [Command] }
 
 initState :: State
-initState = State [] 0 []
+initState = State [("it",0)] 0 []
 
 -- Given a variable name and a value, return a new set of variables with
 -- that name and value added.
 -- If it already exists, remove the old value
 updateVars :: Name -> Int -> [(Name, Int)] -> [(Name, Int)]
-updateVars n x vars = dropVar n vars ++ [(n,x)] --Needs logic to gemove old value
+updateVars n x vars = dropVar n vars ++ [(n,x)]
 
 -- Return a new set of variables with the given name removed
 dropVar :: Name -> [(Name, Int)] -> [(Name, Int)]
