@@ -22,6 +22,7 @@ data Expr = Add Expr Expr
 -- an expression
 data Command = Set Name Expr
              | Eval Expr
+             | AccessCmdHistory Int
              | Quit
   deriving Show
 
@@ -51,6 +52,9 @@ pCommand = do t <- ident
                    ||| do char ':'
                           char 'q'
                           return Quit
+                          ||| do char '!'
+                                 n <- nat
+                                 return (AccessCmdHistory n)
 
 pExpr :: Parser Expr
 pExpr = do t <- pTerm

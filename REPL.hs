@@ -25,6 +25,10 @@ dropVar n vars = filter (\(a,b) -> a /= n) vars
 addHistory :: State -> Command -> State
 addHistory st cmd = st {history = history st ++ [cmd]}
 
+getCmd :: [Command] -> Int -> Command
+getCmd cs n | length cs < n = error "Index too big"
+            | otherwise     = cs!!(n-1)
+
 process :: State -> Command -> IO ()
 process st (Set var e)
      = do let st' = addHistory st (Set var e)
@@ -39,6 +43,9 @@ process st (Eval e)
           let it = fromJust (eval (vars st') e)
           putStrLn (show it)
           repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)}
+process st (AccessCmdHistory n)
+     = do let newCmd = getCmd (reverse (history st)) n
+          process st newCmd
 process st Quit
      = putStrLn("Bye")
 
