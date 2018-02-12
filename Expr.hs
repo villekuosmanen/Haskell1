@@ -22,6 +22,7 @@ data Expr = Add Expr Expr
 -- an expression
 data Command = Set Name Expr
              | Eval Expr
+             | Quit
   deriving Show
 
 eval :: [(Name, Int)] -> -- Variable name to value mapping
@@ -47,6 +48,9 @@ pCommand = do t <- letter
               return (Set [t] e)
             ||| do e <- pExpr
                    return (Eval e)
+                   ||| do char ':'
+                          char 'q'
+                          return Quit
 
 pExpr :: Parser Expr
 pExpr = do t <- pTerm
