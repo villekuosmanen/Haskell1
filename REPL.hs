@@ -33,7 +33,8 @@ process st (Set var e)
           repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          repl st' {numCalcs = (fromJust (eval (vars st') e))}
+          putStrLn (show (fromJust (eval (vars st') e)))
+          repl st' {numCalcs = numCalcs st' + 1}
 process st Quit
      = putStrLn("Bye")
 
