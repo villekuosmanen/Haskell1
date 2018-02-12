@@ -26,14 +26,15 @@ addHistory :: State -> Command -> State
 addHistory st cmd = st {history = history st ++ [cmd]}
 
 process :: State -> Command -> IO ()
-process st (Set var e) 
+process st (Set var e)
      = do let st' = addHistory st (Set var e)
           -- st' should include the variable set to the result of evaluating e
           putStrLn ("OK")
           repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          repl st' {numCalcs = (fromJust (eval (vars st') e))}
+          putStrLn (show (fromJust (eval (vars st') e)))
+          repl st' {numCalcs = numCalcs st' + 1}
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
@@ -48,4 +49,3 @@ repl st = do putStr (show (numCalcs st) ++ " > ")
                           process st cmd
                   _ -> do putStrLn "Parse error"
                           repl st
-
