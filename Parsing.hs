@@ -37,7 +37,7 @@ instance Monad Parser where
                                                [(v,out)] -> parse (f v) out)
 
 instance Alternative Parser where
-   empty = P (\inp -> []) 
+   empty = P (\inp -> [])
    (<|>) p q = p `mplus` q
 
 instance MonadPlus Parser where
@@ -94,6 +94,9 @@ letter                        =  sat isAlpha
 alphanum                      :: Parser Char
 alphanum                      =  sat isAlphaNum
 
+-- float                         :: Parser Char
+-- float                         =  sat isFloat -- float parsing
+
 char                          :: Char -> Parser Char
 char x                        =  sat (== x)
 
@@ -125,6 +128,11 @@ int                           =  do char '-'
                                     n <- nat
                                     return (-n)
                                   ||| nat
+
+float                         :: Parser Float
+float                         =  do char '-'
+                                    n <- nat
+                                    return (-(fromIntegral n))
 
 space                         :: Parser ()
 space                         =  do many (sat isSpace)
