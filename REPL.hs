@@ -35,44 +35,79 @@ getCmd :: [Command] -> Int -> Command
 getCmd cs n | length cs < n = error "Index too big"
             | otherwise     = cs!!(n-1)
 
-process :: State -> Command -> Handle -> IO ()
-process st (Set var e) handle
+processFiles :: State -> Command -> Handle -> IO ()
+processFiles st (Set var e) handle
      = do let st' = addHistory st (Set var e)
           if var /= "it" then do               -- protecting 'it' variable from modifications
             putStrLn ("OK")
-            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))} handle
+            replFiles st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))} handle
           else do
             putStrLn("Cannot modify the implicit 'it' variable.")
-            repl st' handle
-process st (Eval e) handle
+            replFiles st' handle
+processFiles st (Eval e) handle
      = do let st' = addHistory st (Eval e)
           let it = fromJust (eval (vars st') e)
           putStrLn (show it)
-          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)} handle
-process st (AccessCmdHistory n) handle
+          replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)} handle
+processFiles st (AccessCmdHistory n) handle
      = do let newCmd = getCmd (reverse (history st)) n
-          process st newCmd handle
-process st Quit handle
+          processFiles st newCmd handle
+processFiles st Quit handle
      = putStrLn("Bye")
+
+processUserInput :: State -> Command -> IO ()
+processUserInput st (Set var e)
+     = do let st' = addHistory st (Set var e)
+          if var /= "it" then do               -- protecting 'it' variable from modifications
+            putStrLn ("OK")
+            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
+          else do
+            putStrLn("Cannot modify the implicit 'it' variable.")
+            repl st'
+processUserInput st (Eval e)
+     = do let st' = addHistory st (Eval e)
+          let it = fromJust (eval (vars st') e)
+          putStrLn (show it)
+          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)}
+processUserInput st (AccessCmdHistory n)
+     = do let newCmd = getCmd (reverse (history st)) n
+          processUserInput st newCmd
+processUserInput st Quit
+     = putStrLn("Bye")
+
+
+-- Read, Eval, Print Loop for input files
+-- This reads and parses the input using the pCommand parser, and calls
+-- 'processFiles' to process the command.
+-- 'processFiles' will call 'replFiles' when done, so the system loops.
+
+replFiles :: State -> Handle -> IO ()
+replFiles st handle = do putStr (show (numCalcs st) ++ " > ")
+                         inp <- try (hGetLine handle)
+                         case inp of
+                           Left e ->
+                             if isEOFError e
+                                then do putStrLn("Encountered end of file. Exiting the program.")
+                                        exitSuccess
+                                else ioError e
+                           Right inp ->
+                             do putStrLn (show inp)
+                                case parse pCommand inp of
+                                  [(cmd, "")] -> -- Must parse entire input
+                                     processFiles st cmd handle
+                                  _ -> do putStrLn "Parse error"
+                                          replFiles st handle
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
 -- 'process' to process the command.
 -- 'process' will call 'repl' when done, so the system loops.
 
-repl :: State -> Handle -> IO ()
-repl st handle = do putStr (show (numCalcs st) ++ " > ")
-                    inp <- try (hGetLine handle)
-                    case inp of
-                      Left e ->
-                        if isEOFError e
-                          then do putStrLn("Encountered end of file. Exiting the program.")
-                                  exitFailure
-                          else ioError e
-                      Right inp ->
-                        do putStrLn (show inp)
-                           case parse pCommand inp of
-                             [(cmd, "")] -> -- Must parse entire input
-                               process st cmd handle
-                             _ -> do putStrLn "Parse error"
-                           repl st handle
+repl :: State -> IO ()
+repl st = do putStr (show (numCalcs st) ++ " > ")
+             inp <- getLine
+             case parse pCommand inp of
+                  [(cmd, "")] -> -- Must parse entire input
+                          processUserInput st cmd
+                  _ -> do putStrLn "Parse error"
+                          repl st
