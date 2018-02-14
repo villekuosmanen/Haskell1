@@ -32,17 +32,23 @@ getCmd cs n | length cs < n = error "Index too big"
 process :: State -> Command -> IO ()
 process st (Set var e)
      = do let st' = addHistory st (Set var e)
-          if var /= "it" then do               -- protecting 'it' variable from modifications
-            putStrLn ("OK")
-            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
-          else do
-            putStrLn("Cannot modify the implicit 'it' variable.")
-            repl st'
+          let resultMaybe = eval (vars st) e
+          if var /= "it" && resultMaybe /= Nothing      -- protecting 'it' variable from modifications & check for errors
+            then do putStrLn ("OK")
+                    repl st' {vars = (updateVars var (fromJust resultMaybe ) (vars st))}
+            else if var == "it"
+              then do putStrLn("Cannot modify the implicit 'it' variable.")
+                      repl st'
+              else do putStrLn("Error with evaluating expression") --Proper error handling should go here
+                      repl st'
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          let it = fromJust (eval (vars st') e)
-          putStrLn (show it)
-          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)}
+          let resultMaybe = (eval (vars st') e)
+          if resultMaybe == Nothing
+            then do putStrLn ("Error with evaluating expression")  --Proper error handling should go here
+                    repl st'
+            else do putStrLn (show (fromJust resultMaybe))
+                    repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (fromJust resultMaybe) (vars st)}
 process st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
           process st newCmd

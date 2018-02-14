@@ -14,6 +14,9 @@ data Expr = Add Expr Expr
           | Subtract Expr Expr
           | Multiply Expr Expr
           | Divide Expr Expr
+          | Modulo Expr Expr
+          | Power Expr Expr
+          | Abs Expr
           | Val Int
           | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
@@ -38,6 +41,9 @@ eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
 eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
+eval vars (Modulo x y) = Just (mod) <*> eval vars x <*> eval vars y
+eval vars (Abs x) = Just abs <*> eval vars x
+eval vars (Power x y) = Just (^) <*> eval vars x <*> eval vars y
 
 digitToInt :: [Char] -> Int
 digitToInt ds = read ds
@@ -71,17 +77,31 @@ pFactor = do ds <- many1 digit
              return (Val (digitToInt ds))
            ||| do vs <- ident
                   return (ValueOf vs)
-                ||| do char '('
+                ||| do char '|'
                        e <- pExpr
-                       char ')'
-                       return e
+                       char '|'
+                       return (Abs e)
+                     ||| do char '('
+                            e <- pExpr
+                            char ')'
+                            return e
+   
+pPower :: Parser Expr
+pPower = do f <- pFactor
+            do char '^'
+               p <- pPower
+               return (Power f p)
+             ||| return f
 
 pTerm :: Parser Expr
-pTerm = do f <- pFactor
+pTerm = do f <- pPower
            do char '*'
               t <- pTerm
               return (Multiply f t)
             ||| do char '/'
                    t <- pTerm
                    return (Divide f t)
-                 ||| return f
+                 ||| do char '%'
+                        t <- pTerm
+                        return (Modulo f t)
+                      ||| return f
