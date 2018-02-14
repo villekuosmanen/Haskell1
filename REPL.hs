@@ -3,6 +3,9 @@ module REPL where
 import Expr
 import Parsing
 import Data.Maybe
+import System.IO
+
+data CustomType = CustomType { file :: Handle }
 
 data State = State { vars :: [(Name, Int)],
                      numCalcs :: Int,
@@ -29,24 +32,24 @@ getCmd :: [Command] -> Int -> Command
 getCmd cs n | length cs < n = error "Index too big"
             | otherwise     = cs!!(n-1)
 
-process :: State -> Command -> IO ()
-process st (Set var e)
+process :: State -> Command -> Handle -> IO ()
+process st (Set var e) handle
      = do let st' = addHistory st (Set var e)
           if var /= "it" then do               -- protecting 'it' variable from modifications
             putStrLn ("OK")
-            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))}
+            repl st' {vars = (updateVars var (fromJust (eval (vars st) e)) (vars st))} handle
           else do
             putStrLn("Cannot modify the implicit 'it' variable.")
-            repl st'
-process st (Eval e)
+            repl st' handle
+process st (Eval e) handle
      = do let st' = addHistory st (Eval e)
           let it = fromJust (eval (vars st') e)
           putStrLn (show it)
-          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)}
-process st (AccessCmdHistory n)
+          repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" it (vars st)} handle
+process st (AccessCmdHistory n) handle
      = do let newCmd = getCmd (reverse (history st)) n
-          process st newCmd
-process st Quit
+          process st newCmd handle
+process st Quit handle
      = putStrLn("Bye")
 
 -- Read, Eval, Print Loop
@@ -54,11 +57,12 @@ process st Quit
 -- 'process' to process the command.
 -- 'process' will call 'repl' when done, so the system loops.
 
-repl :: State -> IO ()
-repl st = do putStr (show (numCalcs st) ++ " > ")
-             inp <- getLine
-             case parse pCommand inp of
-                  [(cmd, "")] -> -- Must parse entire input
-                          process st cmd
-                  _ -> do putStrLn "Parse error"
-                          repl st
+repl :: State -> Handle -> IO ()
+repl st handle = do putStr (show (numCalcs st) ++ " > ")
+                    inp <- hGetLine handle
+                    putStrLn (show inp)
+                    case parse pCommand inp of
+                      [(cmd, "")] -> -- Must parse entire input
+                          process st cmd handle
+                      _ -> do putStrLn "Parse error"
+                              repl st handle
