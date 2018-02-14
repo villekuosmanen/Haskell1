@@ -4,6 +4,9 @@ import Expr
 import Parsing
 import Data.Maybe
 import System.IO
+import System.IO.Error
+import System.Exit
+import Control.Exception
 
 data CustomType = CustomType { file :: Handle }
 
@@ -59,10 +62,17 @@ process st Quit handle
 
 repl :: State -> Handle -> IO ()
 repl st handle = do putStr (show (numCalcs st) ++ " > ")
-                    inp <- hGetLine handle
-                    putStrLn (show inp)
-                    case parse pCommand inp of
-                      [(cmd, "")] -> -- Must parse entire input
-                          process st cmd handle
-                      _ -> do putStrLn "Parse error"
-                              repl st handle
+                    inp <- try (hGetLine handle)
+                    case inp of
+                      Left e ->
+                        if isEOFError e
+                          then do putStrLn("Encountered end of file. Exiting the program.")
+                                  exitFailure
+                          else ioError e
+                      Right inp ->
+                        do putStrLn (show inp)
+                           case parse pCommand inp of
+                             [(cmd, "")] -> -- Must parse entire input
+                               process st cmd handle
+                             _ -> do putStrLn "Parse error"
+                           repl st handle
