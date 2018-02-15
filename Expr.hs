@@ -40,7 +40,9 @@ eval vars (ValueOf n) = find' n vars
 eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
-eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
+eval vars (Divide x y) = if y == 0
+                            then Nothing  --Division by zero
+                            else Just (div) <*> eval vars x <*> eval vars y --currently returns ints
 eval vars (Modulo x y) = Just (mod) <*> eval vars x <*> eval vars y
 eval vars (Abs x) = Just abs <*> eval vars x
 eval vars (Power x y) = Just (^) <*> eval vars x <*> eval vars y
