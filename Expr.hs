@@ -34,15 +34,16 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
         Maybe Int -- Result (if no errors such as missing variables)
 eval vars (Val x) = Just x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
-    where find' _ []         = Nothing
+    where find' _ []         = Nothing--Left "Variable not in scope"
           find' n ((x,y):xs) = if x == n then Just y else find' n xs
 
 eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
-eval vars (Divide x y) = if y == 0
-                            then Nothing  --Division by zero
-                            else Just (div) <*> eval vars x <*> eval vars y --currently returns ints
+eval vars (Divide x y) = do let y' = eval vars y
+                            if y' == Nothing || fromJust(y') == 0                             
+                              then Nothing  --Division by zero
+                              else Just (div) <*> eval vars x <*> eval vars y --currently returns ints
 eval vars (Modulo x y) = Just (mod) <*> eval vars x <*> eval vars y
 eval vars (Abs x) = Just abs <*> eval vars x
 eval vars (Power x y) = Just (^) <*> eval vars x <*> eval vars y
