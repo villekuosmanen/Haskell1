@@ -94,8 +94,13 @@ letter                        =  sat isAlpha
 alphanum                      :: Parser Char
 alphanum                      =  sat isAlphaNum
 
--- float                         :: Parser Char
--- float                         =  sat isFloat -- float parsing
+isFloat                       :: String -> Bool
+isFloat f                     = case reads f :: [(Float, String)] of  -- from Rosetta Code
+  [(_, "")] -> True
+  _         -> False
+
+decimal                       :: Parser String
+decimal                       =  sat isFloat -- float parsing
 
 char                          :: Char -> Parser Char
 char x                        =  sat (== x)
@@ -123,6 +128,10 @@ nat                           :: Parser Int
 nat                           =  do xs <- many1 digit
                                     return (read xs)
 
+float1                        :: Parser Float
+float1                        =  do xs <- many1 decimal
+                                    return (read xs)
+
 int                           :: Parser Int
 int                           =  do char '-'
                                     n <- nat
@@ -131,8 +140,9 @@ int                           =  do char '-'
 
 float                         :: Parser Float
 float                         =  do char '-'
-                                    n <- nat
-                                    return (-(fromIntegral n))
+                                    n <- float1
+                                    return (-n)
+                                  ||| float1
 
 space                         :: Parser ()
 space                         =  do many (sat isSpace)
