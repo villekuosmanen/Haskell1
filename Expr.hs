@@ -88,10 +88,13 @@ pFactor = do ds <- many1 digit
              return (Val (digitToInt ds))
            ||| do vs <- ident
                   return (ValueOf vs)
-                ||| do char '('
-                       e <- pExpr
-                       char ')'
-                       return e
+                ||| do char '-'
+                       ds <- many1 digit
+                       return (Val (-(digitToInt ds)))
+                     ||| do char '('
+                            e <- pExpr
+                            char ')'
+                            return e
 
 pFactorf :: Parser Expr
 pFactorf = do ds <- many1 digit
