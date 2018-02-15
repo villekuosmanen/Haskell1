@@ -94,10 +94,10 @@ letter                        =  sat isAlpha
 alphanum                      :: Parser Char
 alphanum                      =  sat isAlphaNum
 
--- isFloat                       :: String -> Bool
--- isFloat f                     = case reads f :: [(Float, String)] of  -- from Rosetta Code
---   [(_, "")] -> True
---   _         -> False
+isFloat                       :: String -> Bool
+isFloat f                     = case reads f :: [(Float, String)] of
+  [(_, "")] -> True
+  _         -> False
 
 -- decimal                       :: Parser String
 -- decimal                       =  sat isFloat -- float parsing
@@ -128,9 +128,12 @@ nat                           :: Parser Int
 nat                           =  do xs <- many1 digit
                                     return (read xs)
 
--- float1                        :: Parser Float
--- float1                        =  do xs <- many1 decimal
---                                     return (read xs)
+float1                        :: Parser Float
+float1                        =  do xs1 <- many1 digit
+                                    char '.'
+                                    xs2 <- many1 digit
+                                    let xs = xs1 ++ "." ++ xs2
+                                    return (read xs)
 
 int                           :: Parser Int
 int                           =  do char '-'
@@ -138,11 +141,11 @@ int                           =  do char '-'
                                     return (-n)
                                   ||| nat
 
--- float                         :: Parser Float
--- float                         =  do char '-'
---                                     n <- float1
---                                     return (-n)
---                                   ||| float1
+float                         :: Parser Float
+float                         =  do char '-'
+                                    n <- float1
+                                    return (-n)
+                                  ||| float1
 
 space                         :: Parser ()
 space                         =  do many (sat isSpace)
