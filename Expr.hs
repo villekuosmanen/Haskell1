@@ -34,7 +34,7 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
         Either String Int -- Result (if no errors such as missing variables)
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
-    where find' n []         = Left ("Error: Variable" ++ n ++ "not in scope")
+    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
           find' n ((x,y):xs) = if x == n 
                                   then Right y 
                                   else find' n xs
@@ -43,11 +43,11 @@ eval vars (Add x y) = Right (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Right (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Right (*) <*> eval vars x <*> eval vars y
 eval vars (Divide x y) = do let y' = eval vars y
-                            if isLeft y'
-                              then y'
-                              else if (fromRight 0 y') == 0                     
-                                then Left "Error: Division by zero"
-                                else Right (div) <*> eval vars x <*> eval vars y --currently returns ints
+                            divide' y'
+                            where
+                              divide' (Left xs) = Left xs
+                              divide' (Right 0) = Left "Error: Division by zero"
+                              divide' (Right _) = Right (div) <*> eval vars x <*> eval vars y --currently returns ints
 eval vars (Modulo x y) = Right (mod) <*> eval vars x <*> eval vars y
 eval vars (Abs x) = Right abs <*> eval vars x
 eval vars (Power x y) = Right (^) <*> eval vars x <*> eval vars y

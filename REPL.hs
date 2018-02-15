@@ -36,22 +36,22 @@ process st (Set var e)
           if var == "it" -- protecting 'it' variable from modifications & check for errors
             then do putStrLn("Cannot modify the implicit 'it' variable.")
                     repl st'
-            else either x' y' result
+            else process' st' result
               where
-                x' xs = do putStrLn xs
-                           repl st'
-                y' x  = do putStrLn ("OK")
-                           repl st' {vars = (updateVars var x (vars st))}
+                process' st' (Left xs) = do putStrLn xs
+                                            repl st'
+                process' st' (Right x) = do putStrLn ("OK")
+                                            repl st' {vars = (updateVars var x (vars st))}
 
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
           let result = (eval (vars st') e)
-          either x' y' result
-          where
-                x' xs = do putStrLn xs
-                           repl st'
-                y' x  = putStrLn (show x)
-                           repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
+          process' st' result
+              where
+                process' st' (Left xs) = do putStrLn xs
+                                            repl st'
+                process' st' (Right x) = do putStrLn (show x)
+                                            repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
 process st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
           process st newCmd
