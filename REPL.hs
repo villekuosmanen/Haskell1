@@ -2,7 +2,7 @@ module REPL where
 
 import Expr
 import Parsing
-import Data.Maybe
+import Data.Either
 
 data State = State { vars :: [(Name, Int)],
                      numCalcs :: Int,
@@ -32,23 +32,26 @@ getCmd cs n | length cs < n = error "Index too big"
 process :: State -> Command -> IO ()
 process st (Set var e)
      = do let st' = addHistory st (Set var e)
-          let resultMaybe = eval (vars st) e
-          if var /= "it" && resultMaybe /= Nothing      -- protecting 'it' variable from modifications & check for errors
-            then do putStrLn ("OK")
-                    repl st' {vars = (updateVars var (fromJust resultMaybe ) (vars st))}
-            else if var == "it"
-              then do putStrLn("Cannot modify the implicit 'it' variable.")
-                      repl st'
-              else do putStrLn("Error with evaluating expression") --Proper error handling should go here
-                      repl st'
+          let result = eval (vars st) e
+          if var == "it" -- protecting 'it' variable from modifications & check for errors
+            then do putStrLn("Cannot modify the implicit 'it' variable.")
+                    repl st'
+            else either x' y' result
+              where
+                x' xs = do putStrLn xs
+                           repl st'
+                y' x  = do putStrLn ("OK")
+                           repl st' {vars = (updateVars var x (vars st))}
+
 process st (Eval e)
      = do let st' = addHistory st (Eval e)
-          let resultMaybe = (eval (vars st') e)
-          if resultMaybe == Nothing
-            then do putStrLn ("Error with evaluating expression")  --Proper error handling should go here
-                    repl st'
-            else do putStrLn (show (fromJust resultMaybe))
-                    repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (fromJust resultMaybe) (vars st)}
+          let result = (eval (vars st') e)
+          either x' y' result
+          where
+                x' xs = do putStrLn xs
+                           repl st'
+                y' x  = putStrLn (show x)
+                           repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
 process st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
           process st newCmd
