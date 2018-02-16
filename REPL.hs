@@ -2,7 +2,14 @@ module REPL where
 
 import Expr
 import Parsing
+import Data.Maybe
+import System.IO
+import System.IO.Error
+import System.Exit
+import Control.Exception
 import Data.Either
+
+data CustomType = CustomType { file :: Handle }
 
 data State = State { vars :: [(Name, Int)],
                      numCalcs :: Int,
@@ -29,8 +36,36 @@ getCmd :: [Command] -> Int -> Command
 getCmd cs n | length cs < n = error "Index too big"
             | otherwise     = cs!!(n-1)
 
-process :: State -> Command -> IO ()
-process st (Set var e)
+processFiles :: State -> Command -> Handle -> IO ()
+processFiles st (Set var e) handle
+     = do let st' = addHistory st (Set var e)
+          let result = eval (vars st) e
+          if var == "it" -- protecting 'it' variable from modifications & check for errors
+            then do putStrLn("Cannot modify the implicit 'it' variable.")
+                    replFiles st' handle
+            else process' st' result handle
+              where
+                process' st' (Left xs) handle = do putStrLn xs
+                                                   replFiles st' handle
+                process' st' (Right x) handle = do putStrLn ("OK")
+                                                   replFiles st' {vars = (updateVars var x (vars st))} handle
+processFiles st (Eval e) handle
+     = do let st' = addHistory st (Eval e)
+          let result = (eval (vars st') e)
+          process' st' result handle
+              where
+                process' st' (Left xs) handle = do putStrLn xs
+                                                   replFiles st' handle
+                process' st' (Right x) handle = do putStrLn (show x)
+                                                   replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)} handle
+processFiles st (AccessCmdHistory n) handle
+     = do let newCmd = getCmd (reverse (history st)) n
+          processFiles st newCmd handle
+processFiles st Quit handle
+     = putStrLn("Bye")
+
+processUserInput :: State -> Command -> IO ()
+processUserInput st (Set var e)
      = do let st' = addHistory st (Set var e)
           let result = eval (vars st) e
           if var == "it" -- protecting 'it' variable from modifications & check for errors
@@ -42,9 +77,8 @@ process st (Set var e)
                                             repl st'
                 process' st' (Right x) = do putStrLn ("OK")
                                             repl st' {vars = (updateVars var x (vars st))}
-
-process st (Eval e)
-     = do let st' = addHistory st (Eval e)
+processUserInput st (Eval e)
+     = = do let st' = addHistory st (Eval e)
           let result = (eval (vars st') e)
           process' st' result
               where
@@ -52,11 +86,34 @@ process st (Eval e)
                                             repl st'
                 process' st' (Right x) = do putStrLn (show x)
                                             repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
-process st (AccessCmdHistory n)
+processUserInput st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
-          process st newCmd
-process st Quit
+          processUserInput st newCmd
+processUserInput st Quit
      = putStrLn("Bye")
+
+
+-- Read, Eval, Print Loop for input files
+-- This reads and parses the input using the pCommand parser, and calls
+-- 'processFiles' to process the command.
+-- 'processFiles' will call 'replFiles' when done, so the system loops.
+
+replFiles :: State -> Handle -> IO ()
+replFiles st handle = do putStr (show (numCalcs st) ++ " > ")
+                         inp <- try (hGetLine handle)
+                         case inp of
+                           Left e ->
+                             if isEOFError e
+                                then do putStrLn("Encountered end of file. Exiting the program.")
+                                        exitSuccess
+                                else ioError e
+                           Right inp ->
+                             do putStrLn (show inp)
+                                case parse pCommand inp of
+                                  [(cmd, "")] -> -- Must parse entire input
+                                     processFiles st cmd handle
+                                  _ -> do putStrLn "Parse error"
+                                          replFiles st handle
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
@@ -68,6 +125,6 @@ repl st = do putStr (show (numCalcs st) ++ " > ")
              inp <- getLine
              case parse pCommand inp of
                   [(cmd, "")] -> -- Must parse entire input
-                          process st cmd
+                          processUserInput st cmd
                   _ -> do putStrLn "Parse error"
                           repl st

@@ -92,7 +92,7 @@ pFactor = do ds <- many1 digit
                             e <- pExpr
                             char ')'
                             return e
-   
+
 pPower :: Parser Expr
 pPower = do f <- pFactor
             do char '^'
