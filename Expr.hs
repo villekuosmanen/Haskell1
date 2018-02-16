@@ -35,8 +35,8 @@ eval :: [(Name, Int)] -> -- Variable name to value mapping
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
     where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
-          find' n ((x,y):xs) = if x == n 
-                                  then Right y 
+          find' n ((x,y):xs) = if x == n
+                                  then Right y
                                   else find' n xs
 
 eval vars (Add x y) = Right (+) <*> eval vars y <*> eval vars x
@@ -82,16 +82,19 @@ pExpr = do t <- pTerm
 pFactor :: Parser Expr
 pFactor = do ds <- many1 digit
              return (Val (digitToInt ds))
-           ||| do vs <- ident
-                  return (ValueOf vs)
-                ||| do char '|'
-                       e <- pExpr
-                       char '|'
-                       return (Abs e)
-                     ||| do char '('
+           ||| do char '-'
+                  ds <- many1 digit
+                  return (Val (-(digitToInt ds)))
+                ||| do vs <- ident
+                       return (ValueOf vs)
+                     ||| do char '|'
                             e <- pExpr
-                            char ')'
-                            return e
+                            char '|'
+                            return (Abs e)
+                          ||| do char '('
+                                 e <- pExpr
+                                 char ')'
+                                 return e
 
 pPower :: Parser Expr
 pPower = do f <- pFactor
