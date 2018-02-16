@@ -95,14 +95,6 @@ letter                        =  sat isAlpha
 alphanum                      :: Parser Char
 alphanum                      =  sat isAlphaNum
 
-isFloat                       :: String -> Bool
-isFloat f                     = case reads f :: [(Float, String)] of
-  [(_, "")] -> True
-  _         -> False
-
--- decimal                       :: Parser String
--- decimal                       =  sat isFloat -- float parsing
-
 char                          :: Char -> Parser Char
 char x                        =  sat (== x)
 
@@ -129,13 +121,8 @@ nat                           :: Parser Int
 nat                           =  do xs <- many1 digit
                                     return (read xs)
 
-<<<<<<< HEAD
-float1                        :: Parser Float
-float1                        =  do xs1 <- many1 digit
-=======
 decimal                       :: Parser Float
 decimal                       =  do xs1 <- many digit
->>>>>>> 6474a29037c9620a75abee3a923935d51d4010a6
                                     char '.'
                                     xs2 <- many1 digit
                                     let xs = xs1 ++ "." ++ xs2
@@ -148,17 +135,10 @@ int                           =  do char '-'
                                   ||| nat
 
 float                         :: Parser Float
-<<<<<<< HEAD
-float                         =  do char '-'
-                                    n <- float1
-                                    return (-n)
-                                  ||| float1
-=======
 float                         = do char '-'
                                    n <- decimal
                                    return (-n)
                                  ||| decimal
->>>>>>> 6474a29037c9620a75abee3a923935d51d4010a6
 
 space                         :: Parser ()
 space                         =  do many (sat isSpace)

@@ -4,8 +4,7 @@ import Parsing
 import Control.Applicative
 import Data.List
 import Data.Tuple
-import Data.Maybe
-import Text.Printf
+import Data.Either
 
 type Name = String
 
@@ -15,6 +14,9 @@ data Expr = Add Expr Expr
           | Subtract Expr Expr
           | Multiply Expr Expr
           | Divide Expr Expr
+          | Modulo Expr Expr
+          | Power Expr Expr
+          | Abs Expr
           | Val Int
           | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
@@ -29,29 +31,36 @@ data Command = Set Name Expr
 
 eval :: [(Name, Int)] -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
-        Maybe Int -- Result (if no errors such as missing variables)
-eval vars (Val x) = Just x -- for values, just give the value directly
+        Either String Int -- Result (if no errors such as missing variables)
+eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
-    where find' _ []         = Nothing
-          find' n ((x,y):xs) = if x == n then Just y else find' n xs
+    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
+          find' n ((x,y):xs) = if x == n
+                                  then Right y
+                                  else find' n xs
 
-eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
-eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
-eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
-eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
+eval vars (Add x y) = Right (+) <*> eval vars y <*> eval vars x
+eval vars (Subtract x y) = Right (-) <*> eval vars x <*> eval vars y
+eval vars (Multiply x y) = Right (*) <*> eval vars x <*> eval vars y
+eval vars (Divide x y) = do let y' = eval vars y
+                            divide' y'
+                            where
+                              divide' (Left xs) = Left xs
+                              divide' (Right 0) = Left "Error: Division by zero"
+                              divide' (Right _) = Right (div) <*> eval vars x <*> eval vars y --currently returns ints
+eval vars (Modulo x y) = Right (mod) <*> eval vars x <*> eval vars y
+eval vars (Abs x) = Right abs <*> eval vars x
+eval vars (Power x y) = Right (^) <*> eval vars x <*> eval vars y
 
 digitToInt :: [Char] -> Int
 digitToInt ds = read ds
 
-digitToFloat :: [Char] -> Float
-digitToFloat ds = read ds
-
 pCommand :: Parser Command
 pCommand = do t <- ident
               char '='
-              e <- pExprf
+              e <- pExpr
               return (Set t e)
-            ||| do e <- pExprf
+            ||| do e <- pExpr
                    return (Eval e)
                    ||| do char ':'
                           char 'q'
@@ -73,22 +82,36 @@ pExpr = do t <- pTerm
 pFactor :: Parser Expr
 pFactor = do ds <- many1 digit
              return (Val (digitToInt ds))
-           ||| do vs <- ident
-                  return (ValueOf vs)
-                ||| do char '-'
-                       ds <- many1 digit
-                       return (Val (-(digitToInt ds)))
+           ||| do char '-'
+                  ds <- many1 digit
+                  return (Val (-(digitToInt ds)))
+                ||| do vs <- ident
+                       return (ValueOf vs)
+                     ||| do char '|'
+                            e <- pExpr
+                            char '|'
+                            return (Abs e)
                           ||| do char '('
                                  e <- pExpr
                                  char ')'
                                  return e
 
+pPower :: Parser Expr
+pPower = do f <- pFactor
+            do char '^'
+               p <- pPower
+               return (Power f p)
+             ||| return f
+
 pTerm :: Parser Expr
-pTerm = do f <- pFactor
+pTerm = do f <- pPower
            do char '*'
               t <- pTerm
               return (Multiply f t)
             ||| do char '/'
                    t <- pTerm
                    return (Divide f t)
-                 ||| return f
+                 ||| do char '%'
+                        t <- pTerm
+                        return (Modulo f t)
+                      ||| return f

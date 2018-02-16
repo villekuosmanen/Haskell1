@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-module Main where
-
-import Parsing
-import Expr
-import REPL
-
-main :: IO ()
-main = repl initState
-
-=======
 module Main where
 
 import Parsing
@@ -37,4 +26,3 @@ main = do putStr "Enter M for manual input, F for using input files: "
                   do replFiles initState handle
                      hClose handle
             else main
->>>>>>> 6474a29037c9620a75abee3a923935d51d4010a6
