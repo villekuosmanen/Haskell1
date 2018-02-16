@@ -105,7 +105,7 @@ replFiles st handle = do putStr (show (numCalcs st) ++ " > ")
                            Left e ->
                              if isEOFError e
                                 then do putStrLn("Encountered end of file. Exiting the program.")
-                                        exitSuccess
+                                        return ()
                                 else ioError e
                            Right inp ->
                              do putStrLn (show inp)
