@@ -16,7 +16,6 @@ data Expr = Add Expr Expr
           | Multiply Expr Expr
           | Divide Expr Expr
           | Val Int
-          | Valf Float
           | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
 
@@ -40,19 +39,6 @@ eval vars (Add x y) = Just (+) <*> eval vars y <*> eval vars x
 eval vars (Subtract x y) = Just (-) <*> eval vars x <*> eval vars y
 eval vars (Multiply x y) = Just (*) <*> eval vars x <*> eval vars y
 eval vars (Divide x y) = Just (div) <*> eval vars x <*> eval vars y --currently returns ints
-
-evalf :: [(Name, Float)] -> -- Variable name to value mapping
-        Expr -> -- Expression to evaluate
-        Maybe Float -- Result (if no errors such as missing variables)
-evalf vars (Valf x) = Just x -- for values, just give the value directly
-evalf vars (ValueOf n) = find' n vars
-    where find' _ []         = Nothing
-          find' n ((x,y):xs) = if x == n then Just y else find' n xs
-
-evalf vars (Add x y) = Just (+) <*> evalf vars y <*> evalf vars x
-evalf vars (Subtract x y) = Just (-) <*> evalf vars x <*> evalf vars y
-evalf vars (Multiply x y) = Just (*) <*> evalf vars x <*> evalf vars y
-evalf vars (Divide x y) = Just (/) <*> evalf vars x <*> evalf vars y --different for floats
 
 digitToInt :: [Char] -> Int
 digitToInt ds = read ds
@@ -84,16 +70,6 @@ pExpr = do t <- pTerm
                    return (Subtract t e)
                  ||| return t
 
-pExprf :: Parser Expr
-pExprf = do t <- pTermf
-            do char '+'
-               e <- pExprf
-               return (Add t e)
-             ||| do char '-'
-                    e <- pExprf
-                    return (Subtract t e)
-                  ||| return t
-
 pFactor :: Parser Expr
 pFactor = do ds <- many1 digit
              return (Val (digitToInt ds))
@@ -102,36 +78,10 @@ pFactor = do ds <- many1 digit
                 ||| do char '-'
                        ds <- many1 digit
                        return (Val (-(digitToInt ds)))
-                     -- ||| do ds1 <- many1 digit
-                     --        char '.'
-                     --        ds2 <- many1 digit
-                     --        let ds = ds1 ++ "." ++ ds2
-                     --        return (Valf (digitToFloat ds))
                           ||| do char '('
                                  e <- pExpr
                                  char ')'
                                  return e
-
--- pFactorf :: Parser IO Expr
--- pFactorf = do ds1 <- many1 digit
---               char '.'
---               ds2 <- many1 digit
---               let ds = ds1 ++ "." ++ ds2
---               liftIO $ print ds
---               return (Valf (digitToFloat ds))
-
-pFactorf :: Parser Expr
-pFactorf = do ds <- many1 digit
-              return (Valf (digitToFloat ds))
-            ||| do vs <- ident
-                   return (ValueOf vs)
-                 ||| do char '-'
-                        ds <- many1 digit
-                        return (Valf (-(digitToFloat ds)))
-                      ||| do char '('
-                             e <- pExprf
-                             char ')'
-                             return e
 
 pTerm :: Parser Expr
 pTerm = do f <- pFactor
@@ -142,13 +92,3 @@ pTerm = do f <- pFactor
                    t <- pTerm
                    return (Divide f t)
                  ||| return f
-
-pTermf :: Parser Expr
-pTermf = do f <- pFactorf
-            do char '*'
-               t <- pTermf
-               return (Multiply f t)
-             ||| do char '/'
-                    t <- pTermf
-                    return (Divide f t)
-                  ||| return f
