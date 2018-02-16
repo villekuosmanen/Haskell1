@@ -7,6 +7,7 @@ import System.IO
 import System.IO.Error
 import System.Exit
 import Control.Exception
+import Data.Either
 
 data CustomType = CustomType { file :: Handle }
 
@@ -38,23 +39,25 @@ getCmd cs n | length cs < n = error "Index too big"
 processFiles :: State -> Command -> Handle -> IO ()
 processFiles st (Set var e) handle
      = do let st' = addHistory st (Set var e)
-          let resultMaybe = eval (vars st) e
-          if var /= "it" && resultMaybe /= Nothing      -- protecting 'it' variable from modifications & check for errors
-            then do putStrLn ("OK")
-                    replFiles st' {vars = (updateVars var (fromJust resultMaybe ) (vars st))} handle
-          else if var == "it"
-                 then do putStrLn("Cannot modify the implicit 'it' variable.")
-                         replFiles st' handle
-               else do putStrLn("Error with evaluating expression") --Proper error handling should go here
-                       replFiles st' handle
+          let result = eval (vars st) e
+          if var == "it" -- protecting 'it' variable from modifications & check for errors
+            then do putStrLn("Cannot modify the implicit 'it' variable.")
+                    replFiles st' handle
+            else process' st' result handle
+              where
+                process' st' (Left xs) handle = do putStrLn xs
+                                                   replFiles st' handle
+                process' st' (Right x) handle = do putStrLn ("OK")
+                                                   replFiles st' {vars = (updateVars var x (vars st))} handle
 processFiles st (Eval e) handle
      = do let st' = addHistory st (Eval e)
-          let resultMaybe = (eval (vars st') e)
-          if resultMaybe == Nothing
-              then do putStrLn ("Error with evaluating expression")  --Proper error handling should go here
-                      replFiles st' handle
-          else do putStrLn (show (fromJust resultMaybe))
-                  replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (fromJust resultMaybe) (vars st)} handle
+          let result = (eval (vars st') e)
+          process' st' result handle
+              where
+                process' st' (Left xs) handle = do putStrLn xs
+                                                   replFiles st' handle
+                process' st' (Right x) handle = do putStrLn (show x)
+                                                   replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)} handle
 processFiles st (AccessCmdHistory n) handle
      = do let newCmd = getCmd (reverse (history st)) n
           processFiles st newCmd handle
@@ -64,23 +67,25 @@ processFiles st Quit handle
 processUserInput :: State -> Command -> IO ()
 processUserInput st (Set var e)
      = do let st' = addHistory st (Set var e)
-          let resultMaybe = eval (vars st) e
-          if var /= "it" && resultMaybe /= Nothing      -- protecting 'it' variable from modifications & check for errors
-              then do putStrLn ("OK")
-                      repl st' {vars = (updateVars var (fromJust resultMaybe ) (vars st))}
-          else if var == "it"
-              then do putStrLn("Cannot modify the implicit 'it' variable.")
-                      repl st'
-               else do putStrLn("Error with evaluating expression") --Proper error handling should go here
-                       repl st'
+          let result = eval (vars st) e
+          if var == "it" -- protecting 'it' variable from modifications & check for errors
+            then do putStrLn("Cannot modify the implicit 'it' variable.")
+                    repl st'
+            else process' st' result
+              where
+                process' st' (Left xs) = do putStrLn xs
+                                            repl st'
+                process' st' (Right x) = do putStrLn ("OK")
+                                            repl st' {vars = (updateVars var x (vars st))}
 processUserInput st (Eval e)
      = do let st' = addHistory st (Eval e)
-          let resultMaybe = (eval (vars st') e)
-          if resultMaybe == Nothing
-            then do putStrLn ("Error with evaluating expression")  --Proper error handling should go here
-                    repl st'
-          else do putStrLn (show (fromJust resultMaybe))
-                  repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (fromJust resultMaybe) (vars st)}
+          let result = (eval (vars st') e)
+          process' st' result
+              where
+                process' st' (Left xs) = do putStrLn xs
+                                            repl st'
+                process' st' (Right x) = do putStrLn (show x)
+                                            repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
 processUserInput st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
           processUserInput st newCmd
