@@ -78,7 +78,7 @@ processUserInput st (Set var e)
                 process' st' (Right x) = do putStrLn ("OK")
                                             repl st' {vars = (updateVars var x (vars st))}
 processUserInput st (Eval e)
-     = = do let st' = addHistory st (Eval e)
+     = do let st' = addHistory st (Eval e)
           let result = (eval (vars st') e)
           process' st' result
               where
