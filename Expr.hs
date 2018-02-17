@@ -16,7 +16,7 @@ data Expr = Add Expr Expr
           | Divide Expr Expr
           | Modulo Expr Expr
           | Power Expr Expr
-          -- | Abs Expr
+          | Abs Expr
           | Val (Either Float Int)
           | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
@@ -44,32 +44,54 @@ eval vars (Add x y) = do let x' = eval vars x
                          add' x' y'
                          where
                             add' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
-                            add' (Left xs) _ = Left xs
-                            add' _ (Left ys) = Left ys
-                            add' (Right (Right x)) (Right (Right y)) = Right (Right (x + y)) --integer addition
+                            add' (Left xs) _                         = Left xs
+                            add' _ (Left ys)                         = Left ys
+                            add' (Right (Right x)) (Right (Right y)) = Right (Right (x + y))                                --integer addition
                             add' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) + (eitherToFloat y))) --floaty addition
 eval vars (Subtract x y) = do let x' = eval vars x
                               let y' = eval vars y
                               substract' x' y'
                               where
                                 substract' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
-                                substract' (Left xs) _ = Left xs
-                                substract' _ (Left ys) = Left ys
-                                substract' (Right (Right x)) (Right (Right y)) = Right (Right (x - y)) --integer substraction
+                                substract' (Left xs) _                         = Left xs
+                                substract' _ (Left ys)                         = Left ys
+                                substract' (Right (Right x)) (Right (Right y)) = Right (Right (x - y))                                --integer substraction
                                 substract' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) - (eitherToFloat y))) --floaty substraction
-eval vars (Multiply x y) = Left "" --Right (*) <*> eval vars x <*> eval vars y
+eval vars (Multiply x y) = do let x' = eval vars x
+                              let y' = eval vars y
+                              multiply' x' y'
+                              where
+                                multiply' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                                multiply' (Left xs) _                         = Left xs
+                                multiply' _ (Left ys)                         = Left ys
+                                multiply' (Right (Right x)) (Right (Right y)) = Right (Right (x * y))                                --integer multiplication
+                                multiply' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) * (eitherToFloat y))) --floaty multiplication
 eval vars (Divide x y) = do let x' = eval vars x
                             let y' = eval vars y
                             divide' x' y'
                             where
                               divide' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
-                              divide' (Left xs) _ = Left xs
-                              divide' _ (Left ys) = Left ys
-                              divide' _ (Right (Right 0)) = Left "Error: Division by zero"
-                              divide' (Right (Right x)) (Right (Right y)) = Right (Right (x `div` y)) --integer division
+                              divide' (Left xs) _                         = Left xs
+                              divide' _ (Left ys)                         = Left ys
+                              divide' _ (Right (Right 0))                 = Left "Error: Division by zero"
+                              divide' (Right (Right x)) (Right (Right y)) = Right (Right (x `div` y))                            --integer division
                               divide' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) / (eitherToFloat y))) --floaty division
-eval vars (Modulo x y) = Left ""--Right (mod) <*> eval vars x <*> eval vars y
---eval vars (Abs x) = Right abs <*> eval vars x
+eval vars (Modulo x y) = do let x' = eval vars x
+                            let y' = eval vars y
+                            mod' x' y'
+                            where
+                              mod' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                              mod' (Left xs) _                         = Left xs
+                              mod' _ (Left ys)                         = Left ys
+                              mod' (Right (Right x)) (Right (Right y)) = Right (Right (mod x y))                        --integer modulo
+                              mod' _ _                                 = Left "Error: Modulo not defined for fractions" --Undefined
+eval vars (Abs x) = do let x' = eval vars x
+                       abs' x'
+                       where
+                         abs' :: Either String (Either Float Int) -> Either String (Either Float Int)
+                         abs' (Left xs)         = Left xs
+                         abs' (Right (Right x)) = Right (Right (abs x)) --abs for integers
+                         abs' (Right (Left x))  = Right (Left (abs x))  --abs for floats
 eval vars (Power x y) = Left ""--Right (^) <*> eval vars x <*> eval vars y
 
 digitToInt :: [Char] -> Int
@@ -107,10 +129,10 @@ pFactor = do ds <- floatOrInt
                   return (Val (neg ds))
                 ||| do vs <- ident
                        return (ValueOf vs)
-                     -- ||| do char '|'
-                            -- e <- pExpr
-                            -- char '|'
-                            -- return (Abs e)
+                     ||| do char '|'
+                            e <- pExpr
+                            char '|'
+                            return (Abs e)
                           ||| do char '('
                                  e <- pExpr
                                  char ')'
