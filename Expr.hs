@@ -18,7 +18,7 @@ data Expr = Add Expr Expr
           | Power Expr Expr
           | Abs Expr
           | Val (Either Float Int)
-          | ValueOf Name  --Evaluating variables - only supports char, not string
+          | ValueOf Name  --Evaluating variables
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
@@ -31,7 +31,7 @@ data Command = Set Name Expr
 
 eval :: [(Name, (Either Float Int))] -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
-        Either String (Either Float Int) -- Result (int or float) or an error message 
+        Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
     where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
@@ -83,6 +83,7 @@ eval vars (Modulo x y) = do let x' = eval vars x
                               mod' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
                               mod' (Left xs) _                         = Left xs
                               mod' _ (Left ys)                         = Left ys
+                              mod' _ (Right (Right 0))                 = Left "Error: Division by zero"
                               mod' (Right (Right x)) (Right (Right y)) = Right (Right (mod x y))                        --integer modulo
                               mod' _ _                                 = Left "Error: Modulo not defined for fractions" --Undefined
 eval vars (Abs x) = do let x' = eval vars x
@@ -99,7 +100,7 @@ eval vars (Power x y) = do let x' = eval vars x
                              pow' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
                              pow' (Left xs) _                         = Left xs
                              pow' _ (Left ys)                         = Left ys
-                             pow' (Right (Right x)) (Right (Right y)) = Right (Right (x ^ y))                                --integer exponential
+                             pow' (Right (Right x)) (Right (Right y)) = Right (Right (x ^ y))                                --integer exponential WARNING: currently gives error for negative int exponets
                              pow' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) ** (eitherToFloat y))) --floaty exponential
 
 digitToInt :: [Char] -> Int
@@ -137,14 +138,17 @@ pFactor = do ds <- floatOrInt
                   return (Val (neg ds))
                 ||| do vs <- ident
                        return (ValueOf vs)
-                     ||| do char '|'
-                            e <- pExpr
-                            char '|'
-                            return (Abs e)
-                          ||| do char '('
+                     ||| do char '-'
+                            vs <- ident
+                            return (ValueOf vs) -- WARNING: currently returns positive value instead of negative
+                          ||| do char '|'
                                  e <- pExpr
-                                 char ')'
-                                 return e
+                                 char '|'
+                                 return (Abs e)
+                               ||| do char '('
+                                      e <- pExpr
+                                      char ')'
+                                      return e
 
 pPower :: Parser Expr
 pPower = do f <- pFactor
