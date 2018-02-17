@@ -92,7 +92,15 @@ eval vars (Abs x) = do let x' = eval vars x
                          abs' (Left xs)         = Left xs
                          abs' (Right (Right x)) = Right (Right (abs x)) --abs for integers
                          abs' (Right (Left x))  = Right (Left (abs x))  --abs for floats
-eval vars (Power x y) = Left ""--Right (^) <*> eval vars x <*> eval vars y
+eval vars (Power x y) = do let x' = eval vars x
+                           let y' = eval vars y
+                           pow' x' y'
+                           where
+                             pow' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                             pow' (Left xs) _                         = Left xs
+                             pow' _ (Left ys)                         = Left ys
+                             pow' (Right (Right x)) (Right (Right y)) = Right (Right (x ^ y))                                --integer exponential
+                             pow' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) ** (eitherToFloat y))) --floaty exponential
 
 digitToInt :: [Char] -> Int
 digitToInt ds = read ds
