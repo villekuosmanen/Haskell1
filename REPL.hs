@@ -11,21 +11,21 @@ import Data.Either
 
 data CustomType = CustomType { file :: Handle }
 
-data State = State { vars :: [(Name, Int)],
+data State = State { vars :: [(Name, (Either Float Int))],
                      numCalcs :: Int,
                      history :: [Command] }
 
 initState :: State
-initState = State [("it",0)] 0 []
+initState = State [("it", (Right 0))] 0 []
 
 -- Given a variable name and a value, return a new set of variables with
 -- that name and value added.
 -- If it already exists, remove the old value
-updateVars :: Name -> Int -> [(Name, Int)] -> [(Name, Int)]
+updateVars :: Name -> (Either Float Int) -> [(Name, (Either Float Int))] -> [(Name, (Either Float Int))]
 updateVars n x vars = dropVar n vars ++ [(n,x)]
 
 -- Return a new set of variables with the given name removed
-dropVar :: Name -> [(Name, Int)] -> [(Name, Int)]
+dropVar :: Name -> [(Name, (Either Float Int))] -> [(Name, (Either Float Int))]
 dropVar n vars = filter (\(a,b) -> a /= n) vars
 
 -- Add a command to the command history in the state
@@ -56,8 +56,10 @@ processFiles st (Eval e) handle
               where
                 process' st' (Left xs) handle = do putStrLn xs
                                                    replFiles st' handle
-                process' st' (Right x) handle = do putStrLn (show x)
-                                                   replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)} handle
+                process' st' (Right (Left fl)) handle = do putStrLn (show fl)
+                                                           replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Left fl) (vars st)} handle
+                process' st' (Right (Right intg)) handle = do putStrLn (show intg)
+                                                              replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)} handle
 processFiles st (AccessCmdHistory n) handle
      = do let newCmd = getCmd (reverse (history st)) n
           processFiles st newCmd handle
@@ -84,8 +86,10 @@ processUserInput st (Eval e)
               where
                 process' st' (Left xs) = do putStrLn xs
                                             repl st'
-                process' st' (Right x) = do putStrLn (show x)
-                                            repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" x (vars st)}
+                process' st' (Right (Left fl)) = do putStrLn (show fl)
+                                                    repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Left fl) (vars st)}
+                process' st' (Right (Right intg)) = do putStrLn (show intg)
+                                                       repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)}
 processUserInput st (AccessCmdHistory n)
      = do let newCmd = getCmd (reverse (history st)) n
           processUserInput st newCmd

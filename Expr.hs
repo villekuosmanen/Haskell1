@@ -16,8 +16,8 @@ data Expr = Add Expr Expr
           | Divide Expr Expr
           | Modulo Expr Expr
           | Power Expr Expr
-          | Abs Expr
-          | Val Int
+          -- | Abs Expr
+          | Val (Either Float Int)
           | ValueOf Name  --Evaluating variables - only supports char, not string
   deriving Show
 
@@ -29,9 +29,9 @@ data Command = Set Name Expr
              | Quit
   deriving Show
 
-eval :: [(Name, Int)] -> -- Variable name to value mapping
+eval :: [(Name, (Either Float Int))] -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
-        Either String Int -- Result (if no errors such as missing variables)
+        Either String (Either Float Int) -- Result (int or float) or an error message 
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = find' n vars
     where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
@@ -39,18 +39,38 @@ eval vars (ValueOf n) = find' n vars
                                   then Right y
                                   else find' n xs
 
-eval vars (Add x y) = Right (+) <*> eval vars y <*> eval vars x
-eval vars (Subtract x y) = Right (-) <*> eval vars x <*> eval vars y
-eval vars (Multiply x y) = Right (*) <*> eval vars x <*> eval vars y
-eval vars (Divide x y) = do let y' = eval vars y
-                            divide' y'
+eval vars (Add x y) = do let x' = eval vars x
+                         let y' = eval vars y
+                         add' x' y'
+                         where
+                            add' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                            add' (Left xs) _ = Left xs
+                            add' _ (Left ys) = Left ys
+                            add' (Right (Right x)) (Right (Right y)) = Right (Right (x + y)) --integer addition
+                            add' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) + (eitherToFloat y))) --floaty addition
+eval vars (Subtract x y) = do let x' = eval vars x
+                              let y' = eval vars y
+                              substract' x' y'
+                              where
+                                substract' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                                substract' (Left xs) _ = Left xs
+                                substract' _ (Left ys) = Left ys
+                                substract' (Right (Right x)) (Right (Right y)) = Right (Right (x - y)) --integer substraction
+                                substract' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) - (eitherToFloat y))) --floaty substraction
+eval vars (Multiply x y) = Left "" --Right (*) <*> eval vars x <*> eval vars y
+eval vars (Divide x y) = do let x' = eval vars x
+                            let y' = eval vars y
+                            divide' x' y'
                             where
-                              divide' (Left xs) = Left xs
-                              divide' (Right 0) = Left "Error: Division by zero"
-                              divide' (Right _) = Right (div) <*> eval vars x <*> eval vars y --currently returns ints
-eval vars (Modulo x y) = Right (mod) <*> eval vars x <*> eval vars y
-eval vars (Abs x) = Right abs <*> eval vars x
-eval vars (Power x y) = Right (^) <*> eval vars x <*> eval vars y
+                              divide' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
+                              divide' (Left xs) _ = Left xs
+                              divide' _ (Left ys) = Left ys
+                              divide' _ (Right (Right 0)) = Left "Error: Division by zero"
+                              divide' (Right (Right x)) (Right (Right y)) = Right (Right (x `div` y)) --integer division
+                              divide' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) / (eitherToFloat y))) --floaty division
+eval vars (Modulo x y) = Left ""--Right (mod) <*> eval vars x <*> eval vars y
+--eval vars (Abs x) = Right abs <*> eval vars x
+eval vars (Power x y) = Left ""--Right (^) <*> eval vars x <*> eval vars y
 
 digitToInt :: [Char] -> Int
 digitToInt ds = read ds
@@ -80,17 +100,17 @@ pExpr = do t <- pTerm
                  ||| return t
 
 pFactor :: Parser Expr
-pFactor = do ds <- many1 digit
-             return (Val (digitToInt ds))
+pFactor = do ds <- floatOrInt
+             return (Val ds)
            ||| do char '-'
-                  ds <- many1 digit
-                  return (Val (-(digitToInt ds)))
+                  ds <- floatOrInt
+                  return (Val (neg ds))
                 ||| do vs <- ident
                        return (ValueOf vs)
-                     ||| do char '|'
-                            e <- pExpr
-                            char '|'
-                            return (Abs e)
+                     -- ||| do char '|'
+                            -- e <- pExpr
+                            -- char '|'
+                            -- return (Abs e)
                           ||| do char '('
                                  e <- pExpr
                                  char ')'
@@ -115,3 +135,11 @@ pTerm = do f <- pPower
                         t <- pTerm
                         return (Modulo f t)
                       ||| return f
+
+neg :: Either Float Int -> Either Float Int
+neg (Left x) = Left (-x)
+neg (Right x) = Right (-x)
+
+eitherToFloat :: Either Float Int -> Float
+eitherToFloat (Left x) = x
+eitherToFloat (Right x) = fromIntegral x
