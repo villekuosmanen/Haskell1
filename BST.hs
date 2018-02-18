@@ -53,15 +53,13 @@ findLastLeftElem (Node _ left _) = findLastLeftElem left
 
 getNode :: Name -> Tree -> Either String (Either Float Int)
 getNode name tree = case tree of
-  Empty -> Left ("Error: Variable tree is empty")
+  Empty -> Left ("Error: Variable " ++ name ++ " not in scope")
   Node (nName, nVal) left right ->
-    if treeContains name tree then do
       if name == nName
         then Right nVal
         else if name `compareTo` nName < 0
           then getNode name left
           else getNode name right
-    else Left ("Error: Variable " ++ name ++ " not in scope")
 
 -- if XS > YS, return 1, if XS < YS, return -1, if equal, return 0
 compareTo               :: [Char] -> [Char] -> Int
