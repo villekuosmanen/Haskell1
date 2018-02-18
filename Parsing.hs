@@ -8,6 +8,7 @@ Minor changes by Edwin Brady
 module Parsing where
 
 import Data.Char
+import Data.Either
 import Control.Applicative hiding (many)
 import Control.Monad
 
@@ -37,7 +38,7 @@ instance Monad Parser where
                                                [(v,out)] -> parse (f v) out)
 
 instance Alternative Parser where
-   empty = P (\inp -> []) 
+   empty = P (\inp -> [])
    (<|>) p q = p `mplus` q
 
 instance MonadPlus Parser where
@@ -120,11 +121,30 @@ nat                           :: Parser Int
 nat                           =  do xs <- many1 digit
                                     return (read xs)
 
+decimal                       :: Parser Float
+decimal                       =  do xs1 <- many digit
+                                    char '.'
+                                    xs2 <- many1 digit
+                                    let xs = xs1 ++ "." ++ xs2
+                                    return (read xs)
+
+floatOrInt                       :: Parser (Either Float Int)
+floatOrInt                       =  do fl <- decimal
+                                       return (Left fl)
+                                      ||| do i <- nat
+                                             return (Right i)                               
+
 int                           :: Parser Int
 int                           =  do char '-'
                                     n <- nat
                                     return (-n)
                                   ||| nat
+
+float                         :: Parser Float
+float                         = do char '-'
+                                   n <- decimal
+                                   return (-n)
+                                 ||| decimal
 
 space                         :: Parser ()
 space                         =  do many (sat isSpace)
