@@ -35,6 +35,13 @@ treeUpdate (name, val) tree = case tree of
           then treeUpdate (name, val) right
           else treeInsert (name, val) tree
 
+deleteTree :: Tree -> Name -> Tree
+deleteTree Empty _ = Empty
+deleteTree (Node (nName, nVal) left right) name
+  | name == nName              = deleteNode (Node (nName, nVal) left right)
+  | name `compareTo` nName < 0 = Node (nName, nVal) (deleteTree left name) right
+  | name `compareTo` nName > 0 = Node (nName, nVal) left (deleteTree right name)
+
 deleteNode :: Tree -> Tree
 deleteNode (Node (name, val) Empty right) = right
 deleteNode (Node (name, val) left Empty) = left
