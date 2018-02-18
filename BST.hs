@@ -9,11 +9,11 @@ data Tree = Empty | Node (Name, (Either Float Int)) Tree Tree deriving Show
 treeContains :: Name -> Tree -> Bool
 treeContains name tree = case tree of
   Empty -> False -- empty tree
-  Node (nName, nVal) left right | nName == name -> True
   Node (nName, nVal) left right ->
-    if name `compareTo` nName < 0
-      then (treeContains name left)
-      else (treeContains name right)
+    if name == nName then True
+      else if name `compareTo` nName < 0
+        then (treeContains name left)
+        else (treeContains name right)
 
 treeInsert :: (Name, (Either Float Int)) -> Tree -> Tree
 treeInsert (name, val) tree = case tree of
@@ -54,7 +54,7 @@ findLastLeftElem (Node _ left _) = findLastLeftElem left
 
 getNode :: Name -> Tree -> Either String (Either Float Int)
 getNode name tree = case tree of
-  Empty -> Left ("Error: Variable " ++ name ++ " not in scope")
+  Empty -> Left ("Error: Variable tree is empty")
   Node (nName, nVal) left right ->
     if treeContains name tree then do
       if name == nName then Right nVal
