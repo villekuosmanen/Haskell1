@@ -2,6 +2,7 @@ module REPL where
 
 import Expr
 import Parsing
+import BST
 import Data.Maybe
 import System.IO
 import System.IO.Error
@@ -11,22 +12,20 @@ import Data.Either
 
 data CustomType = CustomType { file :: Handle }
 
-data State = State { vars :: [(Name, (Either Float Int))],
+data State = State { vars :: Tree,
                      numCalcs :: Int,
                      history :: [Command] }
 
 initState :: State
-initState = State [("it", (Right 0))] 0 []
+initState = State (Node ("it", (Right 0)) Empty Empty) 0 []
 
 -- Given a variable name and a value, return a new set of variables with
 -- that name and value added.
 -- If it already exists, remove the old value
-updateVars :: Name -> (Either Float Int) -> [(Name, (Either Float Int))] -> [(Name, (Either Float Int))]
-updateVars n x vars = dropVar n vars ++ [(n,x)]
-
--- Return a new set of variables with the given name removed
-dropVar :: Name -> [(Name, (Either Float Int))] -> [(Name, (Either Float Int))]
-dropVar n vars = filter (\(a,b) -> a /= n) vars
+updateVars :: Name -> (Either Float Int) -> Tree -> Tree
+updateVars n x vars = if treeContains n vars
+  then treeUpdate (n, x) vars
+  else treeInsert (n, x) vars
 
 -- Add a command to the command history in the state
 addHistory :: State -> Command -> State
