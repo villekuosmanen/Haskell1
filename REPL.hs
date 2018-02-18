@@ -100,8 +100,15 @@ processUserInput st (Eval e)
                 process' st' (Right (Right intg)) = do putStrLn (show intg)
                                                        repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)}
 processUserInput st (AccessCmdHistory n)
-     = do let newCmd = getCmd (reverse (history st)) n
-          processUserInput st newCmd
+     = do if (n > length (history st))
+            then do putStrLn("Error: Index too big")
+                    repl st
+            else
+              if (n < 1)
+                then do putStrLn("Error: Negative or 0 index")
+                        repl st
+                else do let newCmd = getCmd (reverse (history st)) n
+                        processUserInput st newCmd
 processUserInput st Quit
      = putStrLn("Bye")
 
