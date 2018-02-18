@@ -27,8 +27,7 @@ treeUpdate :: (Name, (Either Float Int)) -> Tree -> Tree
 treeUpdate (name, val) tree = case tree of
   Node (nName, nVal) left right ->
     if name == nName
-      then do let oldNode = Node (nName, nVal) left right
-              treeInsert (name, val) (deleteNode oldNode)
+      then treeInsert (name, val) (deleteTree tree nName)
       else if name `compareTo` nName < 0
         then treeUpdate (name, val) left
         else if name `compareTo` name > 0
@@ -57,7 +56,8 @@ getNode name tree = case tree of
   Empty -> Left ("Error: Variable tree is empty")
   Node (nName, nVal) left right ->
     if treeContains name tree then do
-      if name == nName then Right nVal
+      if name == nName
+        then Right nVal
         else if name `compareTo` nName < 0
           then getNode name left
           else getNode name right

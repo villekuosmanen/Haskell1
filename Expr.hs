@@ -17,7 +17,7 @@ data Expr = Add Expr Expr
           | Power Expr Expr
           | Abs Expr
           | Val (Either Float Int)
-          | ValueOf Name  --Evaluating variables - only supports char, not string
+          | ValueOf Name  --Evaluating variables
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
