@@ -34,7 +34,7 @@ eval :: Tree -> -- Variable name to value mapping
         Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = getNode n vars
-eval vars (NegValueOf n) = neg1 (getNode n vars)
+eval vars (NegValueOf n) = negVar (getNode n vars)
 
 eval vars (Add x y) = do let x' = eval vars x
                          let y' = eval vars y
@@ -172,9 +172,9 @@ neg :: Either Float Int -> Either Float Int
 neg (Left x) = Left (-x)
 neg (Right x) = Right (-x)
 
-neg1 :: Either String (Either Float Int) -> Either String (Either Float Int)
-neg1 (Right(Left x)) = Right(Left (-x))
-neg1 (Right(Right x)) = Right(Right (-x))
+negVar :: Either String (Either Float Int) -> Either String (Either Float Int)
+negVar (Right(Left x)) = Right(Left (-x))
+negVar (Right(Right x)) = Right(Right (-x))
 
 eitherToFloat :: Either Float Int -> Float
 eitherToFloat (Left x) = x
