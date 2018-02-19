@@ -19,6 +19,7 @@ data Expr = Add Expr Expr
           | Abs Expr
           | Val (Either Float Int)
           | ValueOf Name  --Evaluating variables
+          | NegValueOf Name
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
@@ -37,6 +38,12 @@ eval vars (ValueOf n) = find' n vars
     where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
           find' n ((x,y):xs) = if x == n
                                   then Right y
+                                  else find' n xs
+
+eval vars (NegValueOf n) = find' n vars
+    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
+          find' n ((x,y):xs) = if x == n
+                                  then Right (neg y)
                                   else find' n xs
 
 eval vars (Add x y) = do let x' = eval vars x
@@ -140,7 +147,7 @@ pFactor = do ds <- floatOrInteger
                        return (ValueOf vs)
                      ||| do char '-'
                             vs <- identifier
-                            return (ValueOf vs) -- WARNING: currently returns positive value instead of negative
+                            return (NegValueOf vs)
                           ||| do char '|'
                                  e <- pExpr
                                  char '|'
