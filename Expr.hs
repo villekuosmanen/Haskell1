@@ -5,8 +5,7 @@ import Control.Applicative
 import Data.List
 import Data.Tuple
 import Data.Either
-
-type Name = String
+import BST
 
 -- At first, 'Expr' contains only addition and values. You will need to
 -- add other operations, and variables
@@ -18,7 +17,7 @@ data Expr = Add Expr Expr
           | Power Expr Expr
           | Abs Expr
           | Val (Either Float Int)
-          | ValueOf Name  --Evaluating variables - only supports char, not string
+          | ValueOf Name  --Evaluating variables
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
@@ -29,15 +28,11 @@ data Command = Set Name Expr
              | Quit
   deriving Show
 
-eval :: [(Name, (Either Float Int))] -> -- Variable name to value mapping
+eval :: Tree -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
-        Either String (Either Float Int) -- Result (int or float) or an error message 
+        Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
-eval vars (ValueOf n) = find' n vars
-    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
-          find' n ((x,y):xs) = if x == n
-                                  then Right y
-                                  else find' n xs
+eval vars (ValueOf n) = getNode n vars
 
 eval vars (Add x y) = do let x' = eval vars x
                          let y' = eval vars y
