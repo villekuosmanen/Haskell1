@@ -107,7 +107,7 @@ digitToInt :: [Char] -> Int
 digitToInt ds = read ds
 
 pCommand :: Parser Command
-pCommand = do t <- ident
+pCommand = do t <- identifier
               char '='
               e <- pExpr
               return (Set t e)
@@ -131,15 +131,15 @@ pExpr = do t <- pTerm
                  ||| return t
 
 pFactor :: Parser Expr
-pFactor = do ds <- floatOrInt
+pFactor = do ds <- floatOrInteger
              return (Val ds)
            ||| do char '-'
-                  ds <- floatOrInt
+                  ds <- floatOrInteger
                   return (Val (neg ds))
-                ||| do vs <- ident
+                ||| do vs <- identifier
                        return (ValueOf vs)
                      ||| do char '-'
-                            vs <- ident
+                            vs <- identifier
                             return (ValueOf vs) -- WARNING: currently returns positive value instead of negative
                           ||| do char '|'
                                  e <- pExpr
