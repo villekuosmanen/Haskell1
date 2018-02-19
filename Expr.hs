@@ -5,8 +5,7 @@ import Control.Applicative
 import Data.List
 import Data.Tuple
 import Data.Either
-
-type Name = String
+import BST
 
 -- At first, 'Expr' contains only addition and values. You will need to
 -- add other operations, and variables
@@ -30,21 +29,12 @@ data Command = Set Name Expr
              | Quit
   deriving Show
 
-eval :: [(Name, (Either Float Int))] -> -- Variable name to value mapping
+eval :: Tree -> -- Variable name to value mapping
         Expr -> -- Expression to evaluate
         Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
-eval vars (ValueOf n) = find' n vars
-    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
-          find' n ((x,y):xs) = if x == n
-                                  then Right y
-                                  else find' n xs
-
-eval vars (NegValueOf n) = find' n vars
-    where find' n []         = Left ("Error: Variable " ++ n ++ " not in scope")
-          find' n ((x,y):xs) = if x == n
-                                  then Right (neg y)
-                                  else find' n xs
+eval vars (ValueOf n) = getNode n vars
+eval vars (NegValueOf n) = neg (getNode n vars)
 
 eval vars (Add x y) = do let x' = eval vars x
                          let y' = eval vars y
@@ -107,7 +97,8 @@ eval vars (Power x y) = do let x' = eval vars x
                              pow' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
                              pow' (Left xs) _                         = Left xs
                              pow' _ (Left ys)                         = Left ys
-                             pow' (Right (Right x)) (Right (Right y)) = Right (Right (x ^ y))                                --integer exponential WARNING: currently gives error for negative int exponets
+                             pow' (Right (Right x)) (Right (Right y)) = if (y >= 0) then Right (Right (x ^ y)) --integer exponential
+                                                                          else Right (Left ((realToFrac x) ** (realToFrac y))) -- floaty exp if exp is negative                            
                              pow' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) ** (eitherToFloat y))) --floaty exponential
 
 digitToInt :: [Char] -> Int
