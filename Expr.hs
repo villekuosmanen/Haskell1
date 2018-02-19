@@ -18,6 +18,7 @@ data Expr = Add Expr Expr
           | Abs Expr
           | Val (Either Float Int)
           | ValueOf Name  --Evaluating variables
+          | NegValueOf Name
   deriving Show
 
 -- These are the REPL commands - set a variable name to a value, and evaluate
@@ -33,6 +34,7 @@ eval :: Tree -> -- Variable name to value mapping
         Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = getNode n vars
+eval vars (NegValueOf n) = neg (getNode n vars)
 
 eval vars (Add x y) = do let x' = eval vars x
                          let y' = eval vars y
@@ -78,6 +80,7 @@ eval vars (Modulo x y) = do let x' = eval vars x
                               mod' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
                               mod' (Left xs) _                         = Left xs
                               mod' _ (Left ys)                         = Left ys
+                              mod' _ (Right (Right 0))                 = Left "Error: Division by zero"
                               mod' (Right (Right x)) (Right (Right y)) = Right (Right (mod x y))                        --integer modulo
                               mod' _ _                                 = Left "Error: Modulo not defined for fractions" --Undefined
 eval vars (Abs x) = do let x' = eval vars x
@@ -102,7 +105,7 @@ digitToInt :: [Char] -> Int
 digitToInt ds = read ds
 
 pCommand :: Parser Command
-pCommand = do t <- ident
+pCommand = do t <- identifier
               char '='
               e <- pExpr
               return (Set t e)
@@ -126,21 +129,24 @@ pExpr = do t <- pTerm
                  ||| return t
 
 pFactor :: Parser Expr
-pFactor = do ds <- floatOrInt
+pFactor = do ds <- floatOrInteger
              return (Val ds)
            ||| do char '-'
-                  ds <- floatOrInt
+                  ds <- floatOrInteger
                   return (Val (neg ds))
-                ||| do vs <- ident
+                ||| do vs <- identifier
                        return (ValueOf vs)
-                     ||| do char '|'
-                            e <- pExpr
-                            char '|'
-                            return (Abs e)
-                          ||| do char '('
+                     ||| do char '-'
+                            vs <- identifier
+                            return (NegValueOf vs)
+                          ||| do char '|'
                                  e <- pExpr
-                                 char ')'
-                                 return e
+                                 char '|'
+                                 return (Abs e)
+                               ||| do char '('
+                                      e <- pExpr
+                                      char ')'
+                                      return e
 
 pPower :: Parser Expr
 pPower = do f <- pFactor

@@ -31,6 +31,7 @@ addHistory st cmd = st {history = history st ++ [cmd]}
 
 getCmd :: [Command] -> Int -> Command
 getCmd cs n | length cs < n = error "Index too big"
+            | n < 1         = error "Negative index"
             | otherwise     = cs!!(n-1)
 
 processFiles :: State -> Command -> Handle -> IO ()
@@ -58,8 +59,16 @@ processFiles st (Eval e) handle
                 process' st' (Right (Right intg)) handle = do putStrLn (show intg)
                                                               replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)} handle
 processFiles st (AccessCmdHistory n) handle
-     = do let newCmd = getCmd (reverse (history st)) n
-          processFiles st newCmd handle
+     = do if (n > length (history st))
+            then do putStrLn("Error: Index too big")
+                    replFiles st handle
+            else
+              if (n < 1)
+                then do putStrLn("Error: Negative or 0 index")
+                        replFiles st handle
+                else do let newCmd = getCmd (reverse (history st)) n
+                        processFiles st newCmd handle
+
 processFiles st Quit handle
      = putStrLn("Bye")
 
@@ -88,8 +97,15 @@ processUserInput st (Eval e)
                 process' st' (Right (Right intg)) = do putStrLn (show intg)
                                                        repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)}
 processUserInput st (AccessCmdHistory n)
-     = do let newCmd = getCmd (reverse (history st)) n
-          processUserInput st newCmd
+     = do if (n > length (history st))
+            then do putStrLn("Error: Index too big")
+                    repl st
+            else
+              if (n < 1)
+                then do putStrLn("Error: Negative or 0 index")
+                        repl st
+                else do let newCmd = getCmd (reverse (history st)) n
+                        processUserInput st newCmd
 processUserInput st Quit
      = putStrLn("Bye")
 

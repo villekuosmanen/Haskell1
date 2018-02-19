@@ -128,11 +128,11 @@ decimal                       =  do xs1 <- many digit
                                     let xs = xs1 ++ "." ++ xs2
                                     return (read xs)
 
-floatOrInt                       :: Parser (Either Float Int)
-floatOrInt                       =  do fl <- decimal
-                                       return (Left fl)
-                                      ||| do i <- nat
-                                             return (Right i)                               
+floatOrInt                    :: Parser (Either Float Int)
+floatOrInt                    =  do fl <- decimal
+                                    return (Left fl)
+                                   ||| do i <- nat
+                                          return (Right i)
 
 int                           :: Parser Int
 int                           =  do char '-'
@@ -168,6 +168,12 @@ natural                       =  token nat
 
 integer                       :: Parser Int
 integer                       =  token int
+
+floating                      :: Parser Float
+floating                      = token float
+
+floatOrInteger                :: Parser (Either Float Int)
+floatOrInteger                = token floatOrInt
 
 symbol                        :: String -> Parser String
 symbol xs                     =  token (string xs)
