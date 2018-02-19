@@ -94,7 +94,8 @@ eval vars (Power x y) = do let x' = eval vars x
                              pow' :: Either String (Either Float Int) -> Either String (Either Float Int) -> Either String (Either Float Int)
                              pow' (Left xs) _                         = Left xs
                              pow' _ (Left ys)                         = Left ys
-                             pow' (Right (Right x)) (Right (Right y)) = Right (Right (x ^ y))                                --integer exponential
+                             pow' (Right (Right x)) (Right (Right y)) = if (y >= 0) then Right (Right (x ^ y)) --integer exponential
+                                                                          else Right (Left ((realToFrac x) ** (realToFrac y))) -- floaty exp if exp is negative                            
                              pow' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) ** (eitherToFloat y))) --floaty exponential
 
 digitToInt :: [Char] -> Int
