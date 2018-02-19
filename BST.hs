@@ -6,6 +6,18 @@ type Name = String
 
 data Tree = Empty | Node (Name, (Either Float Int)) Tree Tree deriving Show
 
+treeContains :: Name -> Tree -> Bool
+treeContains name tree = case tree of
+   Empty -> False -- empty tree
+   Node (nName, nVal) left right ->
+     if name == nName then True
+       else if name `compareTo` nName < 0
+        then (treeContains name left)
+        else (treeContains name right)
+
+treeIsEmpty :: Tree -> Bool
+treeIsEmpty Empty = True
+treeIsEmpty _     = False
 
 put :: (Name, (Either Float Int)) -> Tree -> Tree
 put (name, val) tree = case tree of
