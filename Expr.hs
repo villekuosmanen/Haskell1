@@ -34,7 +34,7 @@ eval :: Tree -> -- Variable name to value mapping
         Either String (Either Float Int) -- Result (int or float) or an error message
 eval vars (Val x) = Right x -- for values, just give the value directly
 eval vars (ValueOf n) = getNode n vars
-eval vars (NegValueOf n) = neg (getNode n vars)
+eval vars (NegValueOf n) = neg1 (getNode n vars)
 
 eval vars (Add x y) = do let x' = eval vars x
                          let y' = eval vars y
@@ -98,7 +98,7 @@ eval vars (Power x y) = do let x' = eval vars x
                              pow' (Left xs) _                         = Left xs
                              pow' _ (Left ys)                         = Left ys
                              pow' (Right (Right x)) (Right (Right y)) = if (y >= 0) then Right (Right (x ^ y)) --integer exponential
-                                                                          else Right (Left ((realToFrac x) ** (realToFrac y))) -- floaty exp if exp is negative                            
+                                                                          else Right (Left ((realToFrac x) ** (realToFrac y))) -- floaty exp if exp is negative
                              pow' (Right x) (Right y)                 = Right (Left ((eitherToFloat x) ** (eitherToFloat y))) --floaty exponential
 
 digitToInt :: [Char] -> Int
@@ -171,6 +171,10 @@ pTerm = do f <- pPower
 neg :: Either Float Int -> Either Float Int
 neg (Left x) = Left (-x)
 neg (Right x) = Right (-x)
+
+neg1 :: Either String (Either Float Int) -> Either String (Either Float Int)
+neg1 (Right(Left x)) = Right(Left (-x))
+neg1 (Right(Right x)) = Right(Right (-x))
 
 eitherToFloat :: Either Float Int -> Float
 eitherToFloat (Left x) = x
