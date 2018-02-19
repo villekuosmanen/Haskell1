@@ -6,33 +6,16 @@ type Name = String
 
 data Tree = Empty | Node (Name, (Either Float Int)) Tree Tree deriving Show
 
-treeContains :: Name -> Tree -> Bool
-treeContains name tree = case tree of
-  Empty -> False -- empty tree
-  Node (nName, nVal) left right ->
-    if name == nName then True
-      else if name `compareTo` nName < 0
-        then (treeContains name left)
-        else (treeContains name right)
 
-treeInsert :: (Name, (Either Float Int)) -> Tree -> Tree
-treeInsert (name, val) tree = case tree of
+put :: (Name, (Either Float Int)) -> Tree -> Tree
+put (name, val) tree = case tree of
   Empty -> Node (name, val) Empty Empty -- empty tree is replaced with a node containing value
   Node (nName, nVal) left right ->
-    if name `compareTo` nName < 0
-      then Node (nName, nVal) (treeInsert (name, val) left) right
-      else Node (nName, nVal) left (treeInsert (name, val) right)
-
-treeUpdate :: (Name, (Either Float Int)) -> Tree -> Tree
-treeUpdate (name, val) tree = case tree of
-  Node (nName, nVal) left right ->
     if name == nName
-      then treeInsert (name, val) (deleteTree tree nName)
+      then Node (name, val) left right
       else if name `compareTo` nName < 0
-        then treeUpdate (name, val) left
-        else if name `compareTo` name > 0
-          then treeUpdate (name, val) right
-          else treeInsert (name, val) tree
+        then Node (nName, nVal) (put (name, val) left) right
+        else Node (nName, nVal) left (put (name, val) right)
 
 deleteTree :: Tree -> Name -> Tree
 deleteTree Empty _ = Empty

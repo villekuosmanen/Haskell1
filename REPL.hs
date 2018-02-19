@@ -23,9 +23,7 @@ initState = State (Node ("it", (Right 0)) Empty Empty) 0 []
 -- that name and value added.
 -- If it already exists, remove the old value
 updateVars :: Name -> (Either Float Int) -> Tree -> Tree
-updateVars n x vars = if treeContains n vars
-  then treeUpdate (n, x) vars
-  else treeInsert (n, x) vars
+updateVars n x vars = put (n, x) vars
 
 -- Add a command to the command history in the state
 addHistory :: State -> Command -> State
