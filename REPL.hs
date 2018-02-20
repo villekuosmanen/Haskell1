@@ -10,12 +10,15 @@ import System.Exit
 import Control.Exception
 import Data.Either
 
+-- container for Handle used in reading input files
 data CustomType = CustomType { file :: Handle }
 
+-- calculator state
 data State = State { vars :: Tree,
                      numCalcs :: Int,
                      history :: [Command] }
 
+-- Initial calculator state with "it" variable
 initState :: State
 initState = State (Node ("it", (Right 0)) Empty Empty) 0 []
 
@@ -29,13 +32,15 @@ updateVars n x vars = put (n, x) vars
 addHistory :: State -> Command -> State
 addHistory st cmd = st {history = history st ++ [cmd]}
 
+-- Get command from history of commands
 getCmd :: [Command] -> Int -> Command
 getCmd cs n | length cs < n = error "Index too big"
             | n < 1         = error "Negative index"
             | otherwise     = cs!!(n-1)
 
+-- Process input from file
 processFiles :: State -> Command -> Handle -> IO ()
-processFiles st (Set var e) handle
+processFiles st (Set var e) handle -- set variable
      = do let st' = addHistory st (Set var e)
           let result = eval (vars st) e
           if var == "it" -- protecting 'it' variable from modifications & check for errors
@@ -47,7 +52,7 @@ processFiles st (Set var e) handle
                                                    replFiles st' handle
                 process' st' (Right x) handle = do putStrLn ("OK")
                                                    replFiles st' {vars = (updateVars var x (vars st))} handle
-processFiles st (Eval e) handle
+processFiles st (Eval e) handle -- evaluate expression
      = do let st' = addHistory st (Eval e)
           let result = (eval (vars st') e)
           process' st' result handle
@@ -58,7 +63,7 @@ processFiles st (Eval e) handle
                                                            replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Left fl) (vars st)} handle
                 process' st' (Right (Right intg)) handle = do putStrLn (show intg)
                                                               replFiles st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)} handle
-processFiles st (AccessCmdHistory n) handle
+processFiles st (AccessCmdHistory n) handle -- access command history
      = do if (n > length (history st))
             then do putStrLn("Error: Index too big")
                     replFiles st handle
@@ -69,11 +74,12 @@ processFiles st (AccessCmdHistory n) handle
                 else do let newCmd = getCmd (reverse (history st)) n
                         processFiles st newCmd handle
 
-processFiles st Quit handle
+processFiles st Quit handle -- quit
      = putStrLn("Bye")
 
+-- Process manual user input
 processUserInput :: State -> Command -> IO ()
-processUserInput st (Set var e)
+processUserInput st (Set var e) -- set variable
      = do let st' = addHistory st (Set var e)
           let result = eval (vars st) e
           if var == "it" -- protecting 'it' variable from modifications & check for errors
@@ -85,7 +91,7 @@ processUserInput st (Set var e)
                                             repl st'
                 process' st' (Right x) = do putStrLn ("OK")
                                             repl st' {vars = (updateVars var x (vars st))}
-processUserInput st (Eval e)
+processUserInput st (Eval e) -- evaluate expression
      = do let st' = addHistory st (Eval e)
           let result = (eval (vars st') e)
           process' st' result
@@ -96,7 +102,7 @@ processUserInput st (Eval e)
                                                     repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Left fl) (vars st)}
                 process' st' (Right (Right intg)) = do putStrLn (show intg)
                                                        repl st' {numCalcs = numCalcs st + 1, vars = updateVars "it" (Right intg) (vars st)}
-processUserInput st (AccessCmdHistory n)
+processUserInput st (AccessCmdHistory n) -- access command history
      = do if (n > length (history st))
             then do putStrLn("Error: Index too big")
                     repl st
@@ -106,7 +112,7 @@ processUserInput st (AccessCmdHistory n)
                         repl st
                 else do let newCmd = getCmd (reverse (history st)) n
                         processUserInput st newCmd
-processUserInput st Quit
+processUserInput st Quit -- quit
      = putStrLn("Bye")
 
 
@@ -134,8 +140,8 @@ replFiles st handle = do putStr (show (numCalcs st) ++ " > ")
 
 -- Read, Eval, Print Loop
 -- This reads and parses the input using the pCommand parser, and calls
--- 'process' to process the command.
--- 'process' will call 'repl' when done, so the system loops.
+-- 'processUserInput' to process the command.
+-- 'processUserInput' will call 'repl' when done, so the system loops.
 
 repl :: State -> IO ()
 repl st = do putStr (show (numCalcs st) ++ " > ")

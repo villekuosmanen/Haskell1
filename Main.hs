@@ -7,6 +7,8 @@ import System.IO
 import Control.Exception
 import System.IO.Error
 
+-- Main function
+-- Prompts user to choose from input options and runs REPL loop
 main :: IO ()
 main = do putStr "Enter M for manual input, F for using input files: "
           userChoice <- getLine
